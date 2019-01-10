@@ -40,7 +40,7 @@ str_transcription = ""
 #認識結果保存ファイルの場所を指定
 
 nowtime = datetime.now().strftime('%s')
-rectxt = '/Users/iwasakierika/Documents/Processing/keyboard/data/rec_result'+nowtime+'.json'
+rectxt = '/Users/erika/Research_Processing/ncsm-processing/keyboard/data/rec_result'+nowtime+'.json'
 
 #認識結果を保存するファイルを新規作成
 def make_txtfile():
@@ -55,7 +55,7 @@ def write_txt():
         json.dump(result, outfile, ensure_ascii=False)
 
 def make_list():
-    df = pd.read_csv('/Users/iwasakierika/Documents/Processing/keyboard_v2/data/question.csv', encoding='utf-8', header=None)
+    df = pd.read_csv('/Users/erika/Research_Processing/ncsm-processing/keyboard/data/question.csv', encoding='utf-8', header=None)
     list = df.values.tolist()
     # tag_list = flatten(tag_list)
     return list
@@ -63,34 +63,27 @@ def make_list():
 def make_q_len():
     global list_length
     questions = make_list()
-    list_length = (len(questions))
-
-def make_nexttime():
-    period = 5
-    next_t = elapsed_time + period
-    return next_t
+    return (len(questions))
+    
+# mainの中で一度だけ更新する
+started_time = 0
 
 def make_elapsed_time():
-    global elapsed_time
-    elapsed_time = time.time() - start()
+    elapsed_time = time.time() - started_time
     return elapsed_time
 
-def start():
-    start_time = time.time()
-    return start_time
+def make_numq(arg_nq):
+    q_length = make_q_len()
 
-class Numq:
-    def __init__(self, arg_nq):
-        self.arg_nq = arg_nq
-    def make_numq(self, arg_nq):
-        q_length = list_length
-        if make_elapsed_time() > make_nexttime():
-            self.arg_nq += 1
-            if self.arg_nq > q_length + 1:
-                self.arg_nq = 0
-            make_nexttime()
-            print(arg_nq)
-        return self.arg_nq
+    if make_elapsed_time() < started_time+5:
+        return arg_nq
+
+    arg_nq += 1
+    if arg_nq > q_length + 1:
+        return 0
+
+    return arg_nq
+    
 
 # class Numres:
 #     count = -1
@@ -163,8 +156,6 @@ def run_recognition_loop():
     global is_recording
     global should_finish_stream
 
-    numq = Numq(0)
-
     if len(silent_frames) > 4:
         silent_frames = silent_frames[-4:]
 
@@ -185,6 +176,11 @@ def run_recognition_loop():
             frames = silent_frames + frames
             silent_frames = []
 
+            # nq = make_numq(nq)
+            # result.append([recognition_result.transcription, nq])
+            print(make_numq(0))
+
+
     with cloud_speech_pb2.beta_create_Speech_stub(make_channel(args.host, args.ssl_port)) as service:
         try:
             listen_loop(service.StreamingRecognize(request_stream(), args.deadline_seconds))
@@ -192,8 +188,8 @@ def run_recognition_loop():
             print()
             
             #２次元配列resultに入力結果を格納していく。nqは質問の番号
-            # numq.nq = numq.make_numq(numq.nq)
-            result.append([recognition_result.transcription, nq)
+            result.append([recognition_result.transcription, make_numq(0)])
+            print(nq)
 
         except Exception as e:
             print(str(e))
