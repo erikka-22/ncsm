@@ -76,16 +76,18 @@ def make_elapsed_time():
 
 def make_numq(arg_nq):
     global standard_time
-
+  
     q_length = make_q_len()
-
+    # print(make_elapsed_time())
+    # print(standard_time)
     if make_elapsed_time() < standard_time:
         return arg_nq
 
+    # print("test")
     arg_nq += 1
     standard_time += 5
 
-    if arg_nq > q_length + 1:
+    if arg_nq > q_length - 1:
         return 0
 
     return arg_nq
@@ -182,7 +184,11 @@ def run_recognition_loop():
             print()
             
             #２次元配列resultに入力結果を格納していく。nqは質問の番号
-            result.append([recognition_result.transcription, make_numq(nq)])
+            # make_numq(nq)
+            nq = make_numq(nq)
+            # print(nq)
+            result.append([recognition_result.transcription, nq])
+            print(result)
 
         except Exception as e:
             print(str(e))
@@ -198,7 +204,7 @@ def main():
     make_q_len()
 
     started_time = time.time()
-    standard_time = time.time()
+    standard_time = 5
 
     pa = pyaudio.PyAudio()
     # devices = []
@@ -220,8 +226,8 @@ def main():
         make_numq(nq)
         is_recording = False
         should_finish_stream = False
-        # run_recognition_loop()
-        # write_txt()
+        run_recognition_loop()
+        write_txt()
         
 
     stream.stop_stream()
@@ -245,7 +251,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
     
 main()
-# numres = -1
-# for i in range(5):
-#     numq.nq = numq.make_numq()
-#     print(numres)
+# standard_time = time.time() + 5
+# while True:
+#     nq = make_numq(nq)
+#     print(nq)
