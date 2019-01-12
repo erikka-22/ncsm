@@ -26,6 +26,12 @@ silent_frames = []
 is_recording = False
 should_finish_stream = False
 
+# mainの中で一度だけ更新する
+started_time = 0
+
+standard_time = 0
+nq = 0
+
 class Result:
     def __init__(self):
         self.transcription = ""
@@ -61,24 +67,24 @@ def make_list():
     return list
 
 def make_q_len():
-    global list_length
     questions = make_list()
     return (len(questions))
-    
-# mainの中で一度だけ更新する
-started_time = 0
 
 def make_elapsed_time():
     elapsed_time = time.time() - started_time
     return elapsed_time
 
 def make_numq(arg_nq):
+    global standard_time
+
     q_length = make_q_len()
 
-    if make_elapsed_time() < started_time+5:
+    if make_elapsed_time() < standard_time:
         return arg_nq
 
     arg_nq += 1
+    standard_time += 5
+
     if arg_nq > q_length + 1:
         return 0
 
@@ -147,6 +153,7 @@ def run_recognition_loop():
     global silent_frames
     global is_recording
     global should_finish_stream
+    global nq
 
     if len(silent_frames) > 4:
         silent_frames = silent_frames[-4:]
@@ -168,11 +175,6 @@ def run_recognition_loop():
             frames = silent_frames + frames
             silent_frames = []
 
-            # nq = make_numq(nq)
-            # result.append([recognition_result.transcription, nq])
-            print(make_numq(0))
-
-
     with cloud_speech_pb2.beta_create_Speech_stub(make_channel(args.host, args.ssl_port)) as service:
         try:
             listen_loop(service.StreamingRecognize(request_stream(), args.deadline_seconds))
@@ -180,13 +182,7 @@ def run_recognition_loop():
             print()
             
             #２次元配列resultに入力結果を格納していく。nqは質問の番号
-<<<<<<< HEAD
-            # numq.nq = numq.make_numq(numq.nq)
-            result.append([recognition_result.transcription, nq])
-=======
-            result.append([recognition_result.transcription, make_numq(0)])
-            print(nq)
->>>>>>> 290e91261b5e79455e23513cfa73e247642c2b74
+            result.append([recognition_result.transcription, make_numq(nq)])
 
         except Exception as e:
             print(str(e))
@@ -194,13 +190,15 @@ def run_recognition_loop():
 def main():
     global is_recording
     global should_finish_stream
+    global started_time
+    global standard_time
     global nq
 
     make_txtfile()
     make_q_len()
 
-    start()
-    nq = 0
+    started_time = time.time()
+    standard_time = time.time()
 
     pa = pyaudio.PyAudio()
     # devices = []
@@ -219,12 +217,12 @@ def main():
     stream.start_stream()
 
     while True:
-        # make_numq()
+        make_numq(nq)
         is_recording = False
         should_finish_stream = False
-        run_recognition_loop()
-        write_txt()
-        #recognition_result.transcriptionはそのまま使える 
+        # run_recognition_loop()
+        # write_txt()
+        
 
     stream.stop_stream()
     
