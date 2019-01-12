@@ -46,7 +46,7 @@ str_transcription = ""
 #認識結果保存ファイルの場所を指定
 
 nowtime = datetime.now().strftime('%s')
-rectxt = '/Users/erika/Research_Processing/ncsm-processing/keyboard/data/rec_result'+nowtime+'.json'
+rectxt = '/Users/iwasakierika/Documents/Research/ncsm-processing/keyboard/data/rec_result'+nowtime+'.json'
 
 #認識結果を保存するファイルを新規作成
 def make_txtfile():
