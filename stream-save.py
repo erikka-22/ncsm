@@ -151,7 +151,7 @@ def main():
     make_txtfile()
 
     pa = pyaudio.PyAudio()
-    devices = []
+    # devices = []
     for device_index in range(pa.get_device_count()):
         metadata = pa.get_device_info_by_index(device_index)
         print(device_index, metadata["name"])
