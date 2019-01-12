@@ -193,7 +193,7 @@ def run_recognition_loop():
             
             #２次元配列resultに入力結果を格納していく。nqは質問の番号
             # numq.nq = numq.make_numq(numq.nq)
-            result.append([recognition_result.transcription, nq)
+            result.append([recognition_result.transcription, nq])
 
         except Exception as e:
             print(str(e))
