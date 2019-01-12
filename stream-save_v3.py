@@ -61,7 +61,7 @@ def write_txt():
         json.dump(result, outfile, ensure_ascii=False)
 
 def make_list():
-    df = pd.read_csv('/Users/erika/Research_Processing/ncsm-processing/keyboard/data/question.csv', encoding='utf-8', header=None)
+    df = pd.read_csv('/Users/iwasakierika/Documents/Research/ncsm-processing/keyboard/data/question.csv', encoding='utf-8', header=None)
     list = df.values.tolist()
     # tag_list = flatten(tag_list)
     return list
