@@ -88,7 +88,7 @@ def request_stream():
     streaming_config = cloud_speech_pb2.StreamingRecognitionConfig(
         config=recognition_config,
         interim_results=True,
-        single_utterance=True
+        single_utterance=False
     )
 
     yield cloud_speech_pb2.StreamingRecognizeRequest(streaming_config=streaming_config)
