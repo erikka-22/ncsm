@@ -88,7 +88,7 @@ def request_stream():
     streaming_config = cloud_speech_pb2.StreamingRecognitionConfig(
         config=recognition_config,
         interim_results=True,
-        single_utterance=True
+        single_utterance=False
     )
 
     yield cloud_speech_pb2.StreamingRecognizeRequest(streaming_config=streaming_config)
@@ -151,7 +151,7 @@ def main():
     make_txtfile()
 
     pa = pyaudio.PyAudio()
-    devices = []
+    # devices = []
     for device_index in range(pa.get_device_count()):
         metadata = pa.get_device_info_by_index(device_index)
         print(device_index, metadata["name"])
