@@ -26,6 +26,12 @@ silent_frames = []
 is_recording = False
 should_finish_stream = False
 
+# mainの中で一度だけ更新する
+started_time = 0
+
+standard_time = 0
+nq = 0
+
 class Result:
     def __init__(self):
         self.transcription = ""
@@ -40,7 +46,7 @@ str_transcription = ""
 #認識結果保存ファイルの場所を指定
 
 nowtime = datetime.now().strftime('%s')
-rectxt = '/Users/iwasakierika/Documents/Processing/keyboard/data/rec_result'+nowtime+'.json'
+rectxt = '/Users/iwasakierika/Documents/Research/ncsm-processing/keyboard/data/rec_result'+nowtime+'.json'
 
 #認識結果を保存するファイルを新規作成
 def make_txtfile():
@@ -55,50 +61,37 @@ def write_txt():
         json.dump(result, outfile, ensure_ascii=False)
 
 def make_list():
-    df = pd.read_csv('/Users/iwasakierika/Documents/Processing/keyboard_v2/data/question.csv', encoding='utf-8', header=None)
+    df = pd.read_csv('/Users/iwasakierika/Documents/Research/ncsm-processing/keyboard/data/question.csv', encoding='utf-8', header=None)
     list = df.values.tolist()
     # tag_list = flatten(tag_list)
     return list
 
 def make_q_len():
-    global list_length
     questions = make_list()
-    list_length = (len(questions))
-
-def make_nexttime():
-    period = 5
-    next_t = elapsed_time + period
-    return next_t
+    return (len(questions))
 
 def make_elapsed_time():
-    global elapsed_time
-    elapsed_time = time.time() - start()
+    elapsed_time = time.time() - started_time
     return elapsed_time
 
-def start():
-    start_time = time.time()
-    return start_time
+def make_numq(arg_nq):
+    global standard_time
+  
+    q_length = make_q_len()
+    # print(make_elapsed_time())
+    # print(standard_time)
+    if make_elapsed_time() < standard_time:
+        return arg_nq
 
-class Numq:
-    def __init__(self, arg_nq):
-        self.arg_nq = arg_nq
-    def make_numq(self, arg_nq):
-        q_length = list_length
-        if make_elapsed_time() > make_nexttime():
-            self.arg_nq += 1
-            if self.arg_nq > q_length + 1:
-                self.arg_nq = 0
-            make_nexttime()
-            print(arg_nq)
-        return self.arg_nq
+    # print("test")
+    arg_nq += 1
+    standard_time += 5
 
-# class Numres:
-#     count = -1
-    
-#     def __init__(self):
-#         Numres.count +=1        
-    
+    if arg_nq > q_length - 1:
+        return 0
 
+    return arg_nq
+        
 def make_channel(host, port):
     ssl_channel = implementations.ssl_channel_credentials(None, None, None)
     creds = get_credentials().create_scoped(args.speech_scope)
@@ -162,8 +155,7 @@ def run_recognition_loop():
     global silent_frames
     global is_recording
     global should_finish_stream
-
-    numq = Numq(0)
+    global nq
 
     if len(silent_frames) > 4:
         silent_frames = silent_frames[-4:]
@@ -192,8 +184,11 @@ def run_recognition_loop():
             print()
             
             #２次元配列resultに入力結果を格納していく。nqは質問の番号
-            # numq.nq = numq.make_numq(numq.nq)
-            result.append([recognition_result.transcription, nq)
+            # make_numq(nq)
+            nq = make_numq(nq)
+            # print(nq)
+            result.append([recognition_result.transcription, nq])
+            print(result)
 
         except Exception as e:
             print(str(e))
@@ -201,13 +196,15 @@ def run_recognition_loop():
 def main():
     global is_recording
     global should_finish_stream
+    global started_time
+    global standard_time
     global nq
 
     make_txtfile()
     make_q_len()
 
-    start()
-    nq = 0
+    started_time = time.time()
+    standard_time = 5
 
     pa = pyaudio.PyAudio()
     # devices = []
@@ -226,12 +223,12 @@ def main():
     stream.start_stream()
 
     while True:
-        # make_numq()
+        make_numq(nq)
         is_recording = False
         should_finish_stream = False
         run_recognition_loop()
         write_txt()
-        #recognition_result.transcriptionはそのまま使える 
+        
 
     stream.stop_stream()
     
@@ -254,7 +251,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
     
 main()
-# numres = -1
-# for i in range(5):
-#     numq.nq = numq.make_numq()
-#     print(numres)
+# standard_time = time.time() + 5
+# while True:
+#     nq = make_numq(nq)
+#     print(nq)
