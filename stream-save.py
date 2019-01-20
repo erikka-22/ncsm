@@ -34,8 +34,9 @@ recognition_result = Result()
 
 #認識結果保存ファイルの場所を指定
 
-nowtime = datetime.now().strftime('%s')
-rectxt = '/Users/iwasakierika/Documents/Research/ncsm-processing/keyboard/data/rec_result'+nowtime+'.json'
+# nowtime = datetime.now().strftime('%s')
+hms = datetime.now().strftime("%H:%M:%S")
+rectxt = '/Users/iwasakierika/Documents/Research/ncsm-processing/keyboard/data/rec_result'+hms+'.json'
 # rectxt = '/Users/iwasakierika/Documents/Processing/keyboard/data/rec_result.json'
 
 #認識結果を保存するファイルを新規作成
