@@ -5,6 +5,7 @@ from google.cloud.speech.v1beta1 import cloud_speech_pb2
 from google.rpc import code_pb2
 from grpc.beta import implementations
 from datetime import datetime
+from websocket_server import WebsocketServer
 
 class stdout:
     BOLD = "\033[1m"
