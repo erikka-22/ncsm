@@ -7,6 +7,27 @@ from grpc.beta import implementations
 from datetime import datetime
 from websocket_server import WebsocketServer
 
+def new_client(client, server):
+    print("New client connected and was given id %d" % client['id'])
+    server.send_message_to_all("Hey all, a new client has joined us")
+
+# Called for every client disconnecting
+def client_left(client, server):
+    print("Client(%d) disconnected" % client['id'])
+
+# Called when a client sends a message
+def message_received(client, server, message):
+    if len(message) > 200:
+        message = message[:200]+'..'
+    print("Client(%d) said: %s" % (client['id'], message))
+    server.send_message(client, "hoge")
+    
+PORT=5000
+server = WebsocketServer(PORT)
+server.set_fn_new_client(new_client)
+server.set_fn_client_left(client_left)
+server.set_fn_message_received(message_received)
+
 class stdout:
     BOLD = "\033[1m"
     END = "\033[0m"
@@ -141,7 +162,6 @@ def run_recognition_loop():
             printr(" ".join((bold(recognition_result.transcription), "    ", "confidence: ", str(int(recognition_result.confidence * 100)), "%")))
             print()
             result.append(recognition_result.transcription)
-            # result = [recognition_result.transcription]
         except Exception as e:
             print(str(e))
 
@@ -149,10 +169,13 @@ def main():
     global is_recording
     global should_finish_stream
 
+    # websocketの開始
+    server.run_forever()
+
+    #認識結果保存先ファイルを作成
     make_txtfile()
 
     pa = pyaudio.PyAudio()
-    # devices = []
     for device_index in range(pa.get_device_count()):
         metadata = pa.get_device_info_by_index(device_index)
         print(device_index, metadata["name"])
