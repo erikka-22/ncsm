@@ -1,32 +1,40 @@
 #-*- coding: utf-8 -*-
-import pyaudio, time, audioop, math, sys, argparse, json
+import pyaudio, time, audioop, math, sys, argparse, json, websocket
 from gcloud.credentials import get_credentials
 from google.cloud.speech.v1beta1 import cloud_speech_pb2
 from google.rpc import code_pb2
 from grpc.beta import implementations
 from datetime import datetime
-from websocket_server import WebsocketServer
+# websocketのやり取りのために用いられるモジュール
+try:
+    import thread
+except ImportError:
+    import _thread as thread
 
-def new_client(client, server):
-    print("New client connected and was given id %d" % client['id'])
-    server.send_message_to_all("Hey all, a new client has joined us")
+# websocketの通信がmessage状態のとき
+def on_message(ws, message):
+    print(message)
 
-# Called for every client disconnecting
-def client_left(client, server):
-    print("Client(%d) disconnected" % client['id'])
+# websocketの通信がエラー状態の時
+def on_error(ws, error):
+    print(error)
 
-# Called when a client sends a message
-def message_received(client, server, message):
-    if len(message) > 200:
-        message = message[:200]+'..'
-    print("Client(%d) said: %s" % (client['id'], message))
-    server.send_message(client, "hoge")
-    
-PORT=5000
-server = WebsocketServer(PORT)
-server.set_fn_new_client(new_client)
-server.set_fn_client_left(client_left)
-server.set_fn_message_received(message_received)
+# websocketの通信が閉じた時
+def on_close(ws):
+    print("### closed ###")
+
+# websocketの通信中の時
+def on_open(ws):
+    def run(*args):
+        for i in range(3):
+            time.sleep(1)
+            ws.send("Hello %d" % i)
+        time.sleep(1)
+        ws.close()
+        print("thread terminating...")
+    thread.start_new_thread(run, ())
+
+
 
 class stdout:
     BOLD = "\033[1m"
@@ -57,7 +65,7 @@ recognition_result = Result()
 #認識結果保存ファイルの場所を指定
 
 nowtime = datetime.now().strftime('%s')
-rectext = 'websocket.json'
+rectxt = '/Users/erika/Research_Processing/ncsm-processing/keyboard/data/websocket.json'
 # rectxt = '/Users/erika/Research_Processing/ncsm-processing/keyboard/data/rec_result'+nowtime+'.json'
 
 #認識結果を保存するファイルを新規作成
@@ -168,9 +176,6 @@ def run_recognition_loop():
 def main():
     global is_recording
     global should_finish_stream
-
-    # websocketの開始
-    server.run_forever()
 
     #認識結果保存先ファイルを作成
     make_txtfile()
