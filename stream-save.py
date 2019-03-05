@@ -11,29 +11,6 @@ try:
 except ImportError:
     import _thread as thread
 
-# websocketの通信がmessage状態のとき
-def on_message(ws, message):
-    print(message)
-
-# websocketの通信がエラー状態の時
-def on_error(ws, error):
-    print(error)
-
-# websocketの通信が閉じた時
-def on_close(ws):
-    print("### closed ###")
-
-# websocketの通信中の時
-def on_open(ws):
-    def run(*args):
-        for i in range(3):
-            time.sleep(1)
-            ws.send("Hello %d" % i)
-        time.sleep(1)
-        ws.close()
-        print("thread terminating...")
-    thread.start_new_thread(run, ())
-
 
 
 class stdout:
@@ -53,6 +30,8 @@ frames = []
 silent_frames = []
 is_recording = False
 should_finish_stream = False
+
+to_proc = ""
 
 class Result:
     def __init__(self):
@@ -170,6 +149,8 @@ def run_recognition_loop():
             printr(" ".join((bold(recognition_result.transcription), "    ", "confidence: ", str(int(recognition_result.confidence * 100)), "%")))
             print()
             result.append(recognition_result.transcription)
+            to_proc = recognition_result.transcription
+            ws.send(to_proc)
         except Exception as e:
             print(str(e))
 
@@ -207,6 +188,26 @@ def main():
 
     pa.terminate()
 
+# websocketの通信がmessage状態のとき
+def on_message(ws, message):
+    print(message)
+
+# websocketの通信がエラー状態の時
+def on_error(ws, error):
+    print(error)
+
+# websocketの通信が閉じた時
+def on_close(ws):
+    print("### closed ###")
+
+# websocketの通信中の時
+def on_open(ws):
+    def run(*args):
+        main()
+        ws.close()
+        print("thread terminating...")
+    thread.start_new_thread(run, ())
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--sampling-rate", "-rate", type=int, default=16000)
@@ -220,4 +221,12 @@ if __name__ == "__main__":
     parser.add_argument("--ssl-port", "-port", type=int, default=443)
     parser.add_argument("--host", "-host", type=str, default="speech.googleapis.com")
     args = parser.parse_args()
-    main()
+
+    websocket.enableTrace(True)
+    ws = websocket.WebSocketApp("ws://127.0.0.1:5000",
+                            on_message = on_message,
+                            on_error = on_error,
+                            on_close = on_close)
+    ws.on_open = on_open
+
+    ws.run_forever()
