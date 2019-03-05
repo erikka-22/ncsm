@@ -57,7 +57,7 @@ recognition_result = Result()
 #認識結果保存ファイルの場所を指定
 
 nowtime = datetime.now().strftime('%s')
-rectxt = '/Users/erika/Research_Processing/ncsm-processing/keyboard/data/rec_result'+nowtime+'.json'
+rectxt = 'websocket.json'
 # rectxt = '/Users/iwasakierika/Documents/Processing/keyboard/data/rec_result.json'
 
 #認識結果を保存するファイルを新規作成
