@@ -149,8 +149,9 @@ def run_recognition_loop():
             printr(" ".join((bold(recognition_result.transcription), "    ", "confidence: ", str(int(recognition_result.confidence * 100)), "%")))
             print()
             result.append(recognition_result.transcription)
-            to_proc = recognition_result.transcription
-            ws.send(to_proc)
+            # 認識結果をwebsocketサーバに送る
+            ws.send(recognition_result.transcription)
+            
         except Exception as e:
             print(str(e))
 
