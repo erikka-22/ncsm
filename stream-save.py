@@ -47,6 +47,7 @@ nowtime = datetime.now().strftime('%s')
 rectxt = '/Users/erika/Research_Processing/ncsm-processing/keyboard/data/websocket.json'
 # rectxt = '/Users/erika/Research_Processing/ncsm-processing/keyboard/data/rec_result'+nowtime+'.json'
 
+
 #認識結果を保存するファイルを新規作成
 def make_txtfile():
     global result
