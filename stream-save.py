@@ -1,10 +1,17 @@
 #-*- coding: utf-8 -*-
-import pyaudio, time, audioop, math, sys, argparse, json
+import pyaudio, time, audioop, math, sys, argparse, json, websocket
 from gcloud.credentials import get_credentials
 from google.cloud.speech.v1beta1 import cloud_speech_pb2
 from google.rpc import code_pb2
 from grpc.beta import implementations
 from datetime import datetime
+# websocketのやり取りのために用いられるモジュール
+try:
+    import thread
+except ImportError:
+    import _thread as thread
+
+
 
 class stdout:
     BOLD = "\033[1m"
@@ -24,6 +31,8 @@ silent_frames = []
 is_recording = False
 should_finish_stream = False
 
+to_proc = ""
+
 class Result:
     def __init__(self):
         self.transcription = ""
@@ -34,10 +43,10 @@ recognition_result = Result()
 
 #認識結果保存ファイルの場所を指定
 
-# nowtime = datetime.now().strftime('%s')
-hms = datetime.now().strftime("%H:%M:%S")
-rectxt = '/Users/iwasakierika/Documents/Research/ncsm-processing/keyboard/data/rec_result'+hms+'.json'
-# rectxt = '/Users/iwasakierika/Documents/Processing/keyboard/data/rec_result.json'
+nowtime = datetime.now().strftime('%s')
+rectxt = '/Users/erika/Research_Processing/ncsm-processing/keyboard/data/websocket.json'
+# rectxt = '/Users/erika/Research_Processing/ncsm-processing/keyboard/data/rec_result'+nowtime+'.json'
+
 
 #認識結果を保存するファイルを新規作成
 def make_txtfile():
@@ -141,7 +150,9 @@ def run_recognition_loop():
             printr(" ".join((bold(recognition_result.transcription), "    ", "confidence: ", str(int(recognition_result.confidence * 100)), "%")))
             print()
             result.append(recognition_result.transcription)
-            # result = [recognition_result.transcription]
+            # 認識結果をwebsocketサーバに送る
+            ws.send(recognition_result.transcription)
+            
         except Exception as e:
             print(str(e))
 
@@ -149,10 +160,10 @@ def main():
     global is_recording
     global should_finish_stream
 
+    #認識結果保存先ファイルを作成
     make_txtfile()
 
     pa = pyaudio.PyAudio()
-    # devices = []
     for device_index in range(pa.get_device_count()):
         metadata = pa.get_device_info_by_index(device_index)
         print(device_index, metadata["name"])
@@ -179,6 +190,26 @@ def main():
 
     pa.terminate()
 
+# websocketの通信がmessage状態のとき
+def on_message(ws, message):
+    print(message)
+
+# websocketの通信がエラー状態の時
+def on_error(ws, error):
+    print(error)
+
+# websocketの通信が閉じた時
+def on_close(ws):
+    print("### closed ###")
+
+# websocketの通信中の時
+def on_open(ws):
+    def run(*args):
+        main()
+        ws.close()
+        print("thread terminating...")
+    thread.start_new_thread(run, ())
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--sampling-rate", "-rate", type=int, default=16000)
@@ -192,4 +223,12 @@ if __name__ == "__main__":
     parser.add_argument("--ssl-port", "-port", type=int, default=443)
     parser.add_argument("--host", "-host", type=str, default="speech.googleapis.com")
     args = parser.parse_args()
-    main()
+
+    websocket.enableTrace(True)
+    ws = websocket.WebSocketApp("ws://127.0.0.1:5000",
+                            on_message = on_message,
+                            on_error = on_error,
+                            on_close = on_close)
+    ws.on_open = on_open
+
+    ws.run_forever()
