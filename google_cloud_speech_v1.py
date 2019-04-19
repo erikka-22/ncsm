@@ -1,12 +1,18 @@
 from __future__ import division
 
-import re, sys, pyaudio, json
+import re, sys, pyaudio, json, websocket
 
 from google.cloud import speech
 from google.cloud.speech import enums
 from google.cloud.speech import types
 from six.moves import queue
 from datetime import datetime
+# websocketのやり取りのために用いられるモジュール
+try:
+    import thread
+except ImportError:
+    import _thread as thread
+
 
 # Audio recording parameters
 RATE = 16000
@@ -14,20 +20,22 @@ CHUNK = int(RATE / 10)  # 100ms
 
 # ファイル名に用いる
 nowtime = datetime.now().strftime('%s')
+
 #認識結果保存ファイルの場所を指定
 rectxt = '/Users/erika/Research_Processing/ncsm-processing/keyboard/data/websocket.json'
 
+# 最終認識結果(is_final:true)を保存するリスト
+to_pcg = []
+
 #認識結果を保存するファイルを新規作成
 def make_txtfile():
-    global result
-    result = []
     with open(rectxt, mode='w') as outfile:
-        json.dump(result, outfile)
+        json.dump(to_pcg, outfile)
 
 #認識結果を書き込む指示
 def write_txt():
     with open(rectxt, mode='w') as outfile:
-        json.dump(result, outfile, ensure_ascii=False)
+        json.dump(to_pcg, outfile, ensure_ascii=False)
 
 
 class MicrophoneStream(object):
@@ -109,7 +117,7 @@ def listen_print_loop(responses):
     the next result to overwrite it, until the response is a final one. For the
     final one, print a newline to preserve the finalized transcription.
     """
-    num_chars_printed = 0
+
     for response in responses:
         if not response.results:
             continue
@@ -118,41 +126,32 @@ def listen_print_loop(responses):
         # the first result being considered, since once it's `is_final`, it
         # moves on to considering the next utterance.
         result = response.results[0]
-        print(result)
         if not result.alternatives:
             continue
 
         # Display the transcription of the top alternative.
         transcript = result.alternatives[0].transcript
 
-        # Display interim results, but with a carriage return at the end of the
-        # line, so subsequent lines will overwrite them.
-        #
-        # If the previous result was longer than this one, we need to print
-        # some extra spaces to overwrite the previous result
-        overwrite_chars = ' ' * (num_chars_printed - len(transcript))
+        print(transcript)
 
-        if not result.is_final:
-            sys.stdout.write(transcript + overwrite_chars + '\r')
-            sys.stdout.flush()
+        # 最終認識結果をリストに追加
+        to_pcg.append(transcript)
 
-            num_chars_printed = len(transcript)
-
-        else:
-            print(transcript + overwrite_chars)
-
-            # Exit recognition if any of the transcribed phrases could be
-            # one of our keywords.
-            if re.search(r'\b(exit|quit)\b', transcript, re.I):
-                print('Exiting..')
-                break
-
-            num_chars_printed = 0
+        # 認識結果をwebsocketサーバに送信
+        ws.send(transcript)
+        
+        # Exit recognition if any of the transcribed phrases could be
+        # one of our keywords.
+        if re.search(r'\b(exit|quit)\b', transcript, re.I):
+            print('Exiting..')
+            break
 
 def main():
     # See http://g.co/cloud/speech/docs/languages
     # for a list of supported languages.
     language_code = 'ja-JP'  # a BCP-47 language tag
+    print("test")
+    make_txtfile()
 
     client = speech.SpeechClient()
     config = types.RecognitionConfig(
@@ -161,8 +160,7 @@ def main():
         language_code=language_code)
     streaming_config = types.StreamingRecognitionConfig(
         config=config,
-        interim_results=True)
-
+        interim_results=False)
     with MicrophoneStream(RATE, CHUNK) as stream:
         audio_generator = stream.generator()
         requests = (types.StreamingRecognizeRequest(audio_content=content)
@@ -173,5 +171,28 @@ def main():
         # Now, put the transcription responses to use.
         listen_print_loop(responses)
 
+# websocketの通信がエラー状態の時
+def on_error(ws, error):
+    print(error)
+
+# websocketの通信が閉じた時
+def on_close(ws):
+    print("### closed ###")
+
+# websocketの通信中の時
+def on_open(ws):
+    def run(*args):
+        main()
+        ws.close()
+        print("thread terminating...")
+    thread.start_new_thread(run, ())
+
 if __name__ == '__main__':
-    main()
+
+    websocket.enableTrace(True)
+    ws = websocket.WebSocketApp("ws://127.0.0.1:5000",
+                            on_error = on_error,
+                            on_close = on_close)
+    ws.on_open = on_open
+
+    ws.run_forever()
