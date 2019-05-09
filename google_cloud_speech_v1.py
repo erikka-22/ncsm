@@ -103,6 +103,7 @@ class MicrophoneStream(object):
             while True:
                 try:
                     chunk = self._buff.get(block=False)
+
                     if chunk is None:
                         return
                     data.append(chunk)
@@ -145,7 +146,7 @@ def listen_print_loop(responses):
         to_pcg.append(transcript)
 
         # 認識結果をwebsocketサーバに送信
-        ws.send(transcript)
+        # ws.send(transcript)
 
         # Exit recognition if any of the transcribed phrases could be
         # one of our keywords.
@@ -158,7 +159,6 @@ def main():
     # See http://g.co/cloud/speech/docs/languages
     # for a list of supported languages.
     language_code = 'ja-JP'  # a BCP-47 language tag
-    print("test")
     make_txtfile()
 
     client = speech.SpeechClient()
@@ -204,10 +204,11 @@ def on_open(ws):
 
 if __name__ == '__main__':
 
-    websocket.enableTrace(True)
-    ws = websocket.WebSocketApp("ws://127.0.0.1:5000",
-                                on_error=on_error,
-                                on_close=on_close)
-    ws.on_open = on_open
+    # websocket.enableTrace(True)
+    # ws = websocket.WebSocketApp("ws://127.0.0.1:5000",
+    #                             on_error=on_error,
+    #                             on_close=on_close)
+    # ws.on_open = on_open
 
-    ws.run_forever()
+    # ws.run_forever()
+    main()
