@@ -1,50 +1,85 @@
 from __future__ import division
-
-import re, sys, pyaudio, json, websocket
-
-from google.cloud import speech
-from google.cloud.speech import enums
-from google.cloud.speech import types
-from six.moves import queue
 from datetime import datetime
+from six.moves import queue
+from google.cloud.speech import types
+from google.cloud.speech import enums
+from google.cloud import speech
+import math
+import audioop
+import time
+import websocket
+import json
+import pyaudio
+import sys
+import re
+
+
 # websocketのやり取りのために用いられるモジュール
 try:
     import thread
 except ImportError:
     import _thread as thread
 
-
 # Audio recording parameters
 RATE = 16000
 CHUNK = int(RATE / 10)  # 100ms
 
+SLEEP_SECS = 0.025
+DEADLINE_SECS = 8 * 60 * 60
+
+is_sending = False
+silent_decibel = 60
 # ファイル名に用いる
 nowtime = datetime.now().strftime('%s')
 
-#認識結果保存ファイルの場所を指定
+# 認識結果保存ファイルの場所を指定
 rectxt = '/Users/erika/Research_Processing/ncsm-processing/keyboard/data/websocket.json'
 
 # 最終認識結果(is_final:true)を保存するリスト
 to_pcg = []
 
-#認識結果を保存するファイルを新規作成
+# 認識結果を保存するファイルを新規作成
+
+
 def make_txtfile():
     with open(rectxt, mode='w') as outfile:
         json.dump(to_pcg, outfile)
 
-#認識結果を書き込む指示
+# 認識結果を書き込む指示
+
+
 def write_txt():
     with open(rectxt, mode='w') as outfile:
         json.dump(to_pcg, outfile, ensure_ascii=False)
 
 
+def run_recoginition_loop(sample):
+    global is_sending
+
+    while not is_sending:
+        time.sleep(SLEEP_SECS)
+
+        rms = audioop.rms(sample, 2)
+        decibel = 20 * math.log10(rms) if rms > 0 else 0
+
+        if decibel < silent_decibel:
+            sample = None
+            return sample
+        # print("test")
+        print("test")
+        is_sending = True
+        return sample
+
+
 class MicrophoneStream(object):
     """Opens a recording stream as a generator yielding the audio chunks."""
+
     def __init__(self, rate, chunk):
         self._rate = rate
         self._chunk = chunk
 
         # Create a thread-safe buffer of audio data
+        # stream-save.pyで言う所のframesにあたる変数。queueでマルチスレッド化。
         self._buff = queue.Queue()
         self.closed = True
 
@@ -75,32 +110,42 @@ class MicrophoneStream(object):
         self._buff.put(None)
         self._audio_interface.terminate()
 
+    # コールバック関数
     def _fill_buffer(self, in_data, frame_count, time_info, status_flags):
         """Continuously collect data from the audio stream, into the buffer."""
         self._buff.put(in_data)
         return None, pyaudio.paContinue
 
     def generator(self):
+        global is_sending
         while not self.closed:
             # Use a blocking get() to ensure there's at least one chunk of
             # data, and stop iteration if the chunk is None, indicating the
             # end of the audio stream.
             chunk = self._buff.get()
-            if chunk is None:
+
+            chunk_volume_check = run_recoginition_loop(chunk)
+
+            if chunk_volume_check is None:
                 return
-            data = [chunk]
+            data = [chunk_volume_check]
+            is_sending = False
 
             # Now consume whatever other data's still buffered.
             while True:
                 try:
+                    # print("test")
                     chunk = self._buff.get(block=False)
-                    if chunk is None:
+                    chunk_volume_check = run_recoginition_loop(chunk)
+                    if chunk_volume_check is None:
                         return
-                    data.append(chunk)
+                    data.append(chunk_volume_check)
+                    is_sending = False
                 except queue.Empty:
                     break
 
             yield b''.join(data)
+
 
 def listen_print_loop(responses):
     """Iterates through server responses and prints them.
@@ -138,19 +183,20 @@ def listen_print_loop(responses):
         to_pcg.append(transcript)
 
         # 認識結果をwebsocketサーバに送信
-        ws.send(transcript)
-        
+        # ws.send(transcript)
+
         # Exit recognition if any of the transcribed phrases could be
         # one of our keywords.
         if re.search(r'\b(exit|quit)\b', transcript, re.I):
             print('Exiting..')
             break
 
+
 def main():
+    global is_sending
     # See http://g.co/cloud/speech/docs/languages
     # for a list of supported languages.
     language_code = 'ja-JP'  # a BCP-47 language tag
-    print("test")
     make_txtfile()
 
     client = speech.SpeechClient()
@@ -162,24 +208,31 @@ def main():
         config=config,
         interim_results=False)
     with MicrophoneStream(RATE, CHUNK) as stream:
+        # audiogeneratorに対して、デシベルをチェックして制御。別途関数を用意して、引数にaudio_generatorを入れる。
         audio_generator = stream.generator()
+        print(audio_generator)
         requests = (types.StreamingRecognizeRequest(audio_content=content)
                     for content in audio_generator)
-
         responses = client.streaming_recognize(streaming_config, requests)
+        # print("test")
 
         # Now, put the transcription responses to use.
         listen_print_loop(responses)
-
 # websocketの通信がエラー状態の時
+
+
 def on_error(ws, error):
     print(error)
 
 # websocketの通信が閉じた時
+
+
 def on_close(ws):
     print("### closed ###")
 
 # websocketの通信中の時
+
+
 def on_open(ws):
     def run(*args):
         main()
@@ -187,12 +240,14 @@ def on_open(ws):
         print("thread terminating...")
     thread.start_new_thread(run, ())
 
+
 if __name__ == '__main__':
 
-    websocket.enableTrace(True)
-    ws = websocket.WebSocketApp("ws://127.0.0.1:5000",
-                            on_error = on_error,
-                            on_close = on_close)
-    ws.on_open = on_open
+    # websocket.enableTrace(True)
+    # ws = websocket.WebSocketApp("ws://127.0.0.1:5000",
+    #                         on_error = on_error,
+    #                         on_close = on_close)
+    # ws.on_open = on_open
 
-    ws.run_forever()
+    # ws.run_forever()
+    main()
