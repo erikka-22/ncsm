@@ -197,7 +197,7 @@ def on_close(ws):
 
 def on_open(ws):
     def run(*args):
-        main()
+        execution()()
         ws.close()
         print("thread terminating...")
     thread.start_new_thread(run, ())
