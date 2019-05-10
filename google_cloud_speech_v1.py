@@ -207,11 +207,11 @@ execution()
 
 if __name__ == '__main__':
 
-    # websocket.enableTrace(True)
-    # ws = websocket.WebSocketApp("ws://127.0.0.1:5000",
-    #                             on_error=on_error,
-    #                             on_close=on_close)
-    # ws.on_open = on_open
+    websocket.enableTrace(True)
+    ws = websocket.WebSocketApp("ws://127.0.0.1:5000",
+                                on_error=on_error,
+                                on_close=on_close)
+    ws.on_open = on_open
 
-    # ws.run_forever()
-    execution()
+    ws.run_forever()
+    # execution()
