@@ -202,6 +202,8 @@ def on_open(ws):
     thread.start_new_thread(run, ())
 
 
+main()
+
 if __name__ == '__main__':
 
     # websocket.enableTrace(True)
