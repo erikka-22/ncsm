@@ -155,7 +155,8 @@ def listen_print_loop(responses):
             break
 
 
-def main():
+def execution():
+    print("hello")
     # See http://g.co/cloud/speech/docs/languages
     # for a list of supported languages.
     language_code = 'ja-JP'  # a BCP-47 language tag
@@ -202,7 +203,7 @@ def on_open(ws):
     thread.start_new_thread(run, ())
 
 
-main()
+execution()
 
 if __name__ == '__main__':
 
@@ -213,4 +214,4 @@ if __name__ == '__main__':
     # ws.on_open = on_open
 
     # ws.run_forever()
-    main()
+    execution()
