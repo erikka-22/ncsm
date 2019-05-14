@@ -146,7 +146,7 @@ def listen_print_loop(responses):
         to_pcg.append(transcript)
 
         # 認識結果をwebsocketサーバに送信
-        # ws.send(transcript)
+        ws.send(transcript)
 
         # Exit recognition if any of the transcribed phrases could be
         # one of our keywords.
@@ -155,7 +155,7 @@ def listen_print_loop(responses):
             break
 
 
-def execution():
+def main():
     print("hello")
     # See http://g.co/cloud/speech/docs/languages
     # for a list of supported languages.
@@ -169,7 +169,8 @@ def execution():
         language_code=language_code)
     streaming_config = types.StreamingRecognitionConfig(
         config=config,
-        interim_results=False)
+        interim_results=False,
+        single_utterance=True)
     with MicrophoneStream(RATE, CHUNK) as stream:
         audio_generator = stream.generator()
         requests = (types.StreamingRecognizeRequest(audio_content=content)
@@ -196,14 +197,14 @@ def on_close(ws):
 
 
 def on_open(ws):
+    ws.send("connected")
+
     def run(*args):
-        execution()()
+        main()
         ws.close()
         print("thread terminating...")
-    thread.start_new_thread(run, ())
+        thread.start_new_thread(run, ())
 
-
-execution()
 
 if __name__ == '__main__':
 
