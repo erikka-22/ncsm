@@ -126,6 +126,7 @@ def listen_print_loop(responses):
     final one, print a newline to preserve the finalized transcription.
     """
 
+    num_chars_printed = 0
     for response in responses:
         if not response.results:
             continue
@@ -140,19 +141,35 @@ def listen_print_loop(responses):
         # Display the transcription of the top alternative.
         transcript = result.alternatives[0].transcript
 
-        print(transcript)
+        # Display interim results, but with a carriage return at the end of the
+        # line, so subsequent lines will overwrite them.
+        #
+        # If the previous result was longer than this one, we need to print
+        # some extra spaces to overwrite the previous result
+        overwrite_chars = ' ' * (num_chars_printed - len(transcript))
 
-        # 最終認識結果をリストに追加
-        to_pcg.append(transcript)
+        if not result.is_final:
+            sys.stdout.write(transcript + overwrite_chars + '\r')
+            sys.stdout.flush()
 
-        # 認識結果をwebsocketサーバに送信
-        ws.send(transcript)
+            num_chars_printed = len(transcript)
 
-        # Exit recognition if any of the transcribed phrases could be
-        # one of our keywords.
-        if re.search(r'\b(exit|quit)\b', transcript, re.I):
-            print('Exiting..')
-            break
+        else:
+            print(transcript + overwrite_chars)
+
+            # Exit recognition if any of the transcribed phrases could be
+            # one of our keywords.
+            if re.search(r'\b(exit|quit)\b', transcript, re.I):
+                print('Exiting..')
+                break
+
+            # 最終認識結果をリストに追加
+            to_pcg.append(transcript + overwrite_chars)
+
+            # 認識結果をwebsocketサーバに送信
+            ws.send(transcript + overwrite_chars)
+
+            num_chars_printed = 0
 
 
 def main():
@@ -170,7 +187,7 @@ def main():
     streaming_config = types.StreamingRecognitionConfig(
         config=config,
         interim_results=False,
-        single_utterance=True)
+        single_utterance=False)
     with MicrophoneStream(RATE, CHUNK) as stream:
         audio_generator = stream.generator()
         requests = (types.StreamingRecognizeRequest(audio_content=content)
