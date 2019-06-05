@@ -5,6 +5,7 @@ import sys
 import pyaudio
 import json
 import websocket
+import threading
 
 from google.cloud import speech
 from google.cloud.speech import enums
