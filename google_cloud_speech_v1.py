@@ -6,6 +6,7 @@ import pyaudio
 import json
 import websocket
 import threading
+import time
 
 from google.cloud import speech
 from google.cloud.speech import enums
@@ -29,8 +30,10 @@ nowtime = datetime.now().strftime('%s')
 # 認識結果保存ファイルの場所を指定
 rectxt = '/Users/erika/Research_Processing/ncsm-processing/keyboard/data/websocket.json'
 
-# 最終認識結果(is_final:true)を保存するリスト
+# 認識結果を保存するリスト
 to_pcg = []
+
+charBuff = queue.Queue()
 
 # 認識結果を保存するファイルを新規作成
 
@@ -45,6 +48,33 @@ def make_txtfile():
 def write_txt():
     with open(rectxt, mode='w') as outfile:
         json.dump(to_pcg, outfile, ensure_ascii=False)
+
+
+def divideText(showChar):
+    for char in showChar:
+        charBuff.put(char)
+
+
+def sendCharacter():
+    while not charBuff.empty():
+        c = charBuff.get()
+        print(c)
+        ws.send(c)
+        time.sleep(8)
+
+
+def schedule(interval, wait=True):
+    base_time = time.time()
+    next_time = 0
+    while True:
+        t = threading.Thread(target=sendCharacter)
+        t.start()
+        if wait:
+            t.join()
+        next_time = ((base_time - time.time()) % interval) or interval
+        time.sleep(next_time)
+        if charBuff.empty() is True:
+            break
 
 
 class MicrophoneStream(object):
@@ -164,16 +194,20 @@ def listen_print_loop(responses):
                 print('Exiting..')
                 break
 
-            # 最終認識結果をリストに追加
-            to_pcg.append(transcript + overwrite_chars)
+            recognizedText = transcript + overwrite_chars
 
-            # 認識結果をwebsocketサーバに送信
-            ws.send(transcript + overwrite_chars)
+            # 最終認識結果をリストに追加
+            to_pcg.append(recognizedText)
+
+            divideText(recognizedText)
+
+            # sendCharacter()
+            schedule(0.25, False)
 
             num_chars_printed = 0
 
 
-def main():
+def speechRecognition():
     print("hello")
     # See http://g.co/cloud/speech/docs/languages
     # for a list of supported languages.
@@ -199,6 +233,7 @@ def main():
         # Now, put the transcription responses to use.
         listen_print_loop(responses)
 
+
 # websocketの通信がエラー状態の時
 
 
@@ -218,7 +253,8 @@ def on_open(ws):
     ws.send("connected")
 
     def run(*args):
-        main()
+        speechRecognition()
+
         ws.close()
         print("thread terminating...")
     thread.start_new_thread(run, ())
