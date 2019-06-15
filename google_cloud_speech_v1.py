@@ -201,7 +201,6 @@ def listen_print_loop(responses):
 
             divideText(recognizedText)
 
-            # sendCharacter()
             schedule(0.25, False)
 
             num_chars_printed = 0
