@@ -35,6 +35,7 @@ to_pcg = []
 
 charBuff = queue.Queue()
 
+flag = True
 # 認識結果を保存するファイルを新規作成
 
 
@@ -197,7 +198,7 @@ def listen_print_loop(responses):
             recognizedText = transcript + overwrite_chars
 
             # 最終認識結果をリストに追加
-            to_pcg.append(recognizedText)
+            # to_pcg.append(recognizedText)
 
             divideText(recognizedText)
 
@@ -249,10 +250,18 @@ def on_close(ws):
 
 
 def on_open(ws):
-    ws.send("connected")
 
     def run(*args):
-        speechRecognition()
+        global flag
+        while True:
+            if flag is True:
+                if ws.recv() == "connect":
+                    flag = False
+            else:
+                speechRecognition()
+                if ws.recv() == "end":
+                    flag = True
+                    write_txt()
 
         ws.close()
         print("thread terminating...")
@@ -265,6 +274,7 @@ if __name__ == '__main__':
     ws = websocket.WebSocketApp("ws://127.0.0.1:5000",
                                 on_error=on_error,
                                 on_close=on_close)
+
     ws.on_open = on_open
 
     ws.run_forever()
