@@ -36,6 +36,7 @@ to_pcg = []
 charBuff = queue.Queue()
 
 flag = True
+msg = ""
 # 認識結果を保存するファイルを新規作成
 
 
@@ -234,6 +235,10 @@ def speechRecognition():
         listen_print_loop(responses)
 
 
+def on_message(ws, message):
+    global msg
+    msg = message
+
 # websocketの通信がエラー状態の時
 
 
@@ -255,11 +260,11 @@ def on_open(ws):
         global flag
         while True:
             if flag is True:
-                if ws.recv() == "connect":
+                if msg == "connect":
                     flag = False
             else:
                 speechRecognition()
-                if ws.recv() == "end":
+                if msg == "end":
                     flag = True
                     write_txt()
 
@@ -273,7 +278,8 @@ if __name__ == '__main__':
     websocket.enableTrace(True)
     ws = websocket.WebSocketApp("ws://127.0.0.1:5000",
                                 on_error=on_error,
-                                on_close=on_close)
+                                on_close=on_close,
+                                on_message=on_message)
 
     ws.on_open = on_open
 
