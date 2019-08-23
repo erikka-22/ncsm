@@ -25,7 +25,6 @@ def worker():
 
 
 def schedule(interval, wait=True):
-    global msg
     base_time = time.time()
     next_time = 0
     while True:

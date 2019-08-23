@@ -28,14 +28,14 @@ CHUNK = int(RATE / 10)  # 100ms
 nowtime = datetime.now().strftime('%s')
 
 # 認識結果保存ファイルの場所を指定
-rectxt = '/Users/erika/Research_Processing/ncsm-processing/keyboard/data/websocket.json'
+rectxt = '/Users/erika/aftertaste/data/voice.json'
 
 # 認識結果を保存するリスト
 to_pcg = []
 
 charBuff = queue.Queue()
 
-flag = True
+flag = False
 msg = ""
 # 認識結果を保存するファイルを新規作成
 
@@ -123,7 +123,13 @@ class MicrophoneStream(object):
         return None, pyaudio.paContinue
 
     def generator(self):
+        global msg
+        global flag
         while not self.closed:
+            if msg == "end":
+                flag = False
+                print("end")
+                break
             # Use a blocking get() to ensure there's at least one chunk of
             # data, and stop iteration if the chunk is None, indicating the
             # end of the audio stream.
@@ -158,7 +164,7 @@ def listen_print_loop(responses):
     the next result to overwrite it, until the response is a final one. For the
     final one, print a newline to preserve the finalized transcription.
     """
-
+    global msg
     num_chars_printed = 0
     for response in responses:
         if not response.results:
@@ -224,7 +230,9 @@ def speechRecognition():
         config=config,
         interim_results=False,
         single_utterance=False)
+
     with MicrophoneStream(RATE, CHUNK) as stream:
+
         audio_generator = stream.generator()
         requests = (types.StreamingRecognizeRequest(audio_content=content)
                     for content in audio_generator)
@@ -233,6 +241,17 @@ def speechRecognition():
 
         # Now, put the transcription responses to use.
         listen_print_loop(responses)
+
+
+def main():
+    global flag
+    while True:
+        if flag is True:
+            speechRecognition()
+        else:
+            print("")
+            if msg == "connected":
+                flag = True
 
 
 def on_message(ws, message):
@@ -255,25 +274,18 @@ def on_close(ws):
 
 
 def on_open(ws):
+    global flag
+    flag = True
 
     def run(*args):
-        global flag
-        while True:
-            if flag is True:
-                if msg == "connect":
-                    flag = False
-            else:
-                speechRecognition()
-                if msg == "end":
-                    flag = True
-                    write_txt()
-
+        main()
         ws.close()
         print("thread terminating...")
     thread.start_new_thread(run, ())
 
 
 if __name__ == '__main__':
+    # speechRecognition()
 
     websocket.enableTrace(True)
     ws = websocket.WebSocketApp("ws://127.0.0.1:5000",
@@ -284,4 +296,4 @@ if __name__ == '__main__':
     ws.on_open = on_open
 
     ws.run_forever()
-    # execution()
+    # # execution()
