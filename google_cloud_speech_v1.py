@@ -1,5 +1,7 @@
+# coding: utf-8
 from __future__ import division
 
+import os
 import re
 import sys
 import pyaudio
@@ -28,7 +30,7 @@ CHUNK = int(RATE / 10)  # 100ms
 nowtime = datetime.now().strftime('%s')
 
 # 認識結果保存ファイルの場所を指定
-rectxt = '/Users/erika/aftertaste/data/voice.json'
+rectext = '/Users/erika/aftertaste/data/voice.json'
 
 # 認識結果を保存するリスト
 to_pcg = []
@@ -37,19 +39,20 @@ charBuff = queue.Queue()
 
 flag = False
 msg = ""
-# 認識結果を保存するファイルを新規作成
-
-
-def make_txtfile():
-    with open(rectxt, mode='w') as outfile:
-        json.dump(to_pcg, outfile)
 
 # 認識結果を書き込む指示
 
 
-def write_txt():
-    with open(rectxt, mode='w') as outfile:
-        json.dump(to_pcg, outfile, ensure_ascii=False)
+def writeJSON():
+    global to_pcg
+    if os.path.isfile(rectext):
+        with open(rectext, mode='a') as outfile:
+            json.dump(to_pcg, outfile, ensure_ascii=False)
+            to_pcg = []
+    else:
+        with open(rectext, mode='w') as outfile:
+            json.dump(to_pcg, outfile, ensure_ascii=False)
+            to_pcg = []
 
 
 def divideText(showChar):
@@ -205,7 +208,7 @@ def listen_print_loop(responses):
             recognizedText = transcript + overwrite_chars
 
             # 最終認識結果をリストに追加
-            # to_pcg.append(recognizedText)
+            to_pcg.append(recognizedText)
 
             divideText(recognizedText)
 
@@ -219,7 +222,6 @@ def speechRecognition():
     # See http://g.co/cloud/speech/docs/languages
     # for a list of supported languages.
     language_code = 'ja-JP'  # a BCP-47 language tag
-    make_txtfile()
 
     client = speech.SpeechClient()
     config = types.RecognitionConfig(
@@ -245,6 +247,7 @@ def speechRecognition():
 
 def main():
     global flag
+    global msg
     while True:
         if flag is True:
             speechRecognition()
@@ -252,6 +255,10 @@ def main():
             print("")
             if msg == "connected":
                 flag = True
+                msg = ""
+            elif msg == "done":
+                writeJSON()
+                msg = ""
 
 
 def on_message(ws, message):
