@@ -45,14 +45,17 @@ msg = ""
 
 def writeJSON():
     global to_pcg
+    # writing = '，'.join(to_pcg)
+    # to_pcg = []
+    # to_pcg = writing
     if os.path.isfile(rectext):
         with open(rectext, mode='a') as outfile:
             json.dump(to_pcg, outfile, ensure_ascii=False)
-            to_pcg = []
+
     else:
         with open(rectext, mode='w') as outfile:
             json.dump(to_pcg, outfile, ensure_ascii=False)
-            to_pcg = []
+    to_pcg = []
 
 
 def divideText(showChar):
