@@ -5,7 +5,6 @@ import os
 import re
 import sys
 import pyaudio
-import json
 import websocket
 import threading
 import time
@@ -30,7 +29,7 @@ CHUNK = int(RATE / 10)  # 100ms
 nowtime = datetime.now().strftime('%s')
 
 # 認識結果保存ファイルの場所を指定
-rectext = '/Users/erika/aftertaste/data/voice.json'
+rectext = '/Users/erika/aftertaste/data/string.txt'
 
 # 認識結果を保存するリスト
 to_pcg = []
@@ -43,19 +42,18 @@ msg = ""
 # 認識結果を書き込む指示
 
 
-def writeJSON():
+def writeText():
     global to_pcg
-    # writing = '，'.join(to_pcg)
-    # to_pcg = []
+    writing = '，'.join(to_pcg) + '\n'
+    to_pcg = []
     # to_pcg = writing
     if os.path.isfile(rectext):
         with open(rectext, mode='a') as outfile:
-            json.dump(to_pcg, outfile, ensure_ascii=False)
+            outfile.write(writing)
 
     else:
         with open(rectext, mode='w') as outfile:
-            json.dump(to_pcg, outfile, ensure_ascii=False)
-    to_pcg = []
+            outfile.write(writing)
 
 
 def divideText(showChar):
@@ -260,7 +258,7 @@ def main():
                 flag = True
                 msg = ""
             elif msg == "done":
-                writeJSON()
+                writeText()
                 msg = ""
 
 
