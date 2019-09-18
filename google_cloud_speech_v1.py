@@ -8,6 +8,7 @@ import pyaudio
 import websocket
 import threading
 import time
+import wave
 
 from google.cloud import speech
 from google.cloud.speech import enums
@@ -24,6 +25,7 @@ except ImportError:
 # Audio recording parameters
 RATE = 16000
 CHUNK = int(RATE / 10)  # 100ms
+CHANNEL = 1
 
 # ファイル名に用いる
 nowtime = datetime.now().strftime('%s')
@@ -33,11 +35,12 @@ rectext = '/Users/erika/aftertaste/data/string.txt'
 
 # 認識結果を保存するリスト
 to_pcg = []
-
+stock = []
 charBuff = queue.Queue()
 
 flag = False
 msg = ""
+
 
 # 認識結果を書き込む指示
 
@@ -45,7 +48,6 @@ msg = ""
 def writeText():
     global to_pcg
     writing = '，'.join(to_pcg) + '\n'
-    to_pcg = []
     # to_pcg = writing
     if os.path.isfile(rectext):
         with open(rectext, mode='a') as outfile:
@@ -54,6 +56,15 @@ def writeText():
     else:
         with open(rectext, mode='w') as outfile:
             outfile.write(writing)
+
+
+def recordSound(ch, rate, sound):
+    file_name = nowtime + ".wav"
+    with wave.open(file_name, 'wb') as wav:
+        wav.setnchannels(ch)
+        wav.setsampwidth(2)
+        wav.setframerate(rate)
+        wav.writeframes(b''.join(sound))
 
 
 def divideText(showChar):
@@ -113,6 +124,7 @@ class MicrophoneStream(object):
         return self
 
     def __exit__(self, type, value, traceback):
+        print("exit")
         self._audio_stream.stop_stream()
         self._audio_stream.close()
         self.closed = True
@@ -129,10 +141,12 @@ class MicrophoneStream(object):
     def generator(self):
         global msg
         global flag
+        global stock
         while not self.closed:
             if msg == "end":
                 flag = False
                 print("end")
+                # self.close = True
                 break
             # Use a blocking get() to ensure there's at least one chunk of
             # data, and stop iteration if the chunk is None, indicating the
@@ -140,6 +154,7 @@ class MicrophoneStream(object):
             chunk = self._buff.get()
             if chunk is None:
                 return
+            stock.append(chunk)
             data = [chunk]
 
             # Now consume whatever other data's still buffered.
@@ -149,6 +164,7 @@ class MicrophoneStream(object):
 
                     if chunk is None:
                         return
+                    stock.append(chunk)
                     data.append(chunk)
                 except queue.Empty:
                     break
@@ -249,12 +265,17 @@ def speechRecognition():
 def main():
     global flag
     global msg
+    global to_pcg
+    global stock
+
     while True:
         if flag is True:
             speechRecognition()
+            recordSound(CHANNEL, RATE, stock)
         else:
-            print("")
             if msg == "connected":
+                to_pcg = []
+                stock = []
                 flag = True
                 msg = ""
             elif msg == "done":
@@ -304,4 +325,4 @@ if __name__ == '__main__':
     ws.on_open = on_open
 
     ws.run_forever()
-    # # execution()
+    # execution()
