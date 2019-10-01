@@ -27,8 +27,6 @@ RATE = 16000
 CHUNK = int(RATE / 10)  # 100ms
 CHANNEL = 1
 
-# ファイル名に用いる
-nowtime = datetime.now().strftime('%s')
 
 # 認識結果保存ファイルの場所を指定
 rectext = '/Users/erika/aftertaste/data/string.txt'
@@ -42,9 +40,12 @@ flag = False
 msg = ""
 
 
+def getNowtime():
+    nowtime = datetime.now().strftime('%s')
+    return nowtime
+
+
 # 認識結果を書き込む指示
-
-
 def writeText():
     global to_pcg
     writing = '，'.join(to_pcg) + '\n'
@@ -59,7 +60,7 @@ def writeText():
 
 
 def recordSound(ch, rate, sound):
-    file_name = nowtime + ".wav"
+    file_name = getNowtime() + ".wav"
     with wave.open(file_name, 'wb') as wav:
         wav.setnchannels(ch)
         wav.setsampwidth(2)
@@ -299,12 +300,12 @@ def on_error(ws, error):
 def on_close(ws):
     print("### closed ###")
 
-# websocketの通信中の時
+# websocketの通信中の時vvvvvvvv
 
 
 def on_open(ws):
     global flag
-    flag = True
+    # flag = True
 
     def run(*args):
         main()
