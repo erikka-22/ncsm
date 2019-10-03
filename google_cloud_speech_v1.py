@@ -9,6 +9,7 @@ import websocket
 import threading
 import time
 import wave
+import numpy
 
 from google.cloud import speech
 from google.cloud.speech import enums
@@ -240,7 +241,6 @@ def speechRecognition():
     # See http://g.co/cloud/speech/docs/languages
     # for a list of supported languages.
     language_code = 'ja-JP'  # a BCP-47 language tag
-
     client = speech.SpeechClient()
     config = types.RecognitionConfig(
         encoding=enums.RecognitionConfig.AudioEncoding.LINEAR16,
@@ -275,13 +275,16 @@ def main():
             recordSound(CHANNEL, RATE, stock)
         else:
             if msg == "connected":
-                to_pcg = []
-                stock = []
+                to_pcg.clear()
+                stock.clear()
                 flag = True
-                msg = ""
+                # msg = ""
             elif msg == "done":
                 writeText()
+                print("test")
                 msg = ""
+            else:
+                print("")
 
 
 def on_message(ws, message):
@@ -300,7 +303,7 @@ def on_error(ws, error):
 def on_close(ws):
     print("### closed ###")
 
-# websocketの通信中の時vvvvvvvv
+# websocketの通信中の時
 
 
 def on_open(ws):
