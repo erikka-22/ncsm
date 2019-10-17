@@ -9,7 +9,7 @@ import websocket
 import threading
 import time
 import wave
-import numpy
+
 
 from google.cloud import speech
 from google.cloud.speech import enums
@@ -30,7 +30,7 @@ CHANNEL = 1
 
 
 # 認識結果保存ファイルの場所を指定
-rectext = '/Users/erika/aftertaste/data/string.txt'
+rectext = '/Users/erika/aftertaste/data/test.txt'
 
 # 認識結果を保存するリスト
 to_pcg = []
@@ -275,16 +275,15 @@ def main():
             recordSound(CHANNEL, RATE, stock)
         else:
             if msg == "connected":
-                to_pcg.clear()
-                stock.clear()
+                to_pcg = []
+                stock = []
                 flag = True
-                # msg = ""
             elif msg == "done":
+                print("write")
                 writeText()
-                print("test")
                 msg = ""
             else:
-                print("")
+                flag = False
 
 
 def on_message(ws, message):
@@ -307,8 +306,6 @@ def on_close(ws):
 
 
 def on_open(ws):
-    global flag
-    # flag = True
 
     def run(*args):
         main()
