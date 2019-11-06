@@ -8,14 +8,18 @@ import pyaudio
 import websocket
 import threading
 import time
-import wave
+import json
+import collections
 
+
+import functions.recordSound as rec_sound
+import functions.send_each_char as send_each_char
 
 from google.cloud import speech
 from google.cloud.speech import enums
 from google.cloud.speech import types
 from six.moves import queue
-from datetime import datetime
+
 # websocketのやり取りのために用いられるモジュール
 try:
     import thread
@@ -35,16 +39,12 @@ rectext = '/Users/erika/aftertaste/data/test.txt'
 # 認識結果を保存するリスト
 to_pcg = []
 stock = []
+
 charBuff = queue.Queue()
 
 can_speechrec_flag = False
 message_from_processing = ""
 icon_name = ""
-
-
-def getNowtime():
-    nowtime = datetime.now().strftime('%s')
-    return nowtime
 
 
 # 認識結果を書き込む指示
@@ -53,6 +53,7 @@ def writeText():
     global icon_name
 
     writing = '，'.join(to_pcg)
+
     if os.path.isfile(rectext):
         with open(rectext, mode='a') as outfile:
             outfile.write(writing)
@@ -60,15 +61,6 @@ def writeText():
     else:
         with open(rectext, mode='w') as outfile:
             outfile.write(writing)
-
-
-def recordSound(ch, rate, sound):
-    file_name = getNowtime() + ".wav"
-    with wave.open(file_name, 'wb') as wav:
-        wav.setnchannels(ch)
-        wav.setsampwidth(2)
-        wav.setframerate(rate)
-        wav.writeframes(b''.join(sound))
 
 
 def divideText(showChar):
@@ -209,15 +201,16 @@ def listen_print_loop(responses):
             # 最終認識結果をリストに追加
             to_pcg.append(recognizedText)
 
-            divideText(recognizedText)
+            send_each_char.divideText(recognizedText)
 
-            schedule(0.25, False)
+            send_each_char.schedule(0.25, False)
 
             num_chars_printed = 0
 
 
 def speechRecognition():
-    print("hello")
+    getWebSocketApp()
+    print("Start SpeechRecognition")
     language_code = 'ja-JP'  # a BCP-47 language tag
     client = speech.SpeechClient()
     config = types.RecognitionConfig(
@@ -251,7 +244,7 @@ def main():
     while True:
         if can_speechrec_flag is True:
             speechRecognition()
-            recordSound(CHANNEL, RATE, stock)
+            rec_sound.recordSound(CHANNEL, RATE, stock)
         else:
             if message_from_processing == "connected":
                 to_pcg = []
@@ -293,6 +286,11 @@ def on_open(ws):
         ws.close()
         print("thread terminating...")
     thread.start_new_thread(run, ())
+
+
+def getWebSocketApp():
+    print(ws)
+    return ws
 
 
 if __name__ == '__main__':
