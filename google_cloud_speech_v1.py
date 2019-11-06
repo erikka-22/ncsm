@@ -37,8 +37,9 @@ to_pcg = []
 stock = []
 charBuff = queue.Queue()
 
-flag = False
-msg = ""
+can_speechrec_flag = False
+message_from_processing = ""
+icon_name = ""
 
 
 def getNowtime():
@@ -49,8 +50,9 @@ def getNowtime():
 # 認識結果を書き込む指示
 def writeText():
     global to_pcg
-    writing = '，'.join(to_pcg) + '\n'
-    # to_pcg = writing
+    global icon_name
+
+    writing = '，'.join(to_pcg)
     if os.path.isfile(rectext):
         with open(rectext, mode='a') as outfile:
             outfile.write(writing)
@@ -115,9 +117,6 @@ class MicrophoneStream(object):
             # https://goo.gl/z757pE
             channels=1, rate=self._rate,
             input=True, frames_per_buffer=self._chunk,
-            # Run the audio stream asynchronously to fill the buffer object.
-            # This is necessary so that the input device's buffer doesn't
-            # overflow while the calling thread makes network requests, etc.
             stream_callback=self._fill_buffer,
         )
 
@@ -141,12 +140,12 @@ class MicrophoneStream(object):
         return None, pyaudio.paContinue
 
     def generator(self):
-        global msg
-        global flag
+        global message_from_processing
+        global can_speechrec_flag
         global stock
         while not self.closed:
-            if msg == "end":
-                flag = False
+            if message_from_processing == "end":
+                can_speechrec_flag = False
                 print("end")
                 # self.close = True
                 break
@@ -175,26 +174,12 @@ class MicrophoneStream(object):
 
 
 def listen_print_loop(responses):
-    """Iterates through server responses and prints them.
-    The responses passed is a generator that will block until a response
-    is provided by the server.
-    Each response may contain multiple results, and each result may contain
-    multiple alternatives; for details, see https://goo.gl/tjCPAU.  Here we
-    print only the transcription for the top alternative of the top result.
-    In this case, responses are provided for interim results as well. If the
-    response is an interim one, print a line feed at the end of it, to allow
-    the next result to overwrite it, until the response is a final one. For the
-    final one, print a newline to preserve the finalized transcription.
-    """
-    global msg
     num_chars_printed = 0
+
     for response in responses:
         if not response.results:
             continue
 
-        # The `results` list is consecutive. For streaming, we only care about
-        # the first result being considered, since once it's `is_final`, it
-        # moves on to considering the next utterance.
         result = response.results[0]
         if not result.alternatives:
             continue
@@ -202,11 +187,6 @@ def listen_print_loop(responses):
         # Display the transcription of the top alternative.
         transcript = result.alternatives[0].transcript
 
-        # Display interim results, but with a carriage return at the end of the
-        # line, so subsequent lines will overwrite them.
-        #
-        # If the previous result was longer than this one, we need to print
-        # some extra spaces to overwrite the previous result
         overwrite_chars = ' ' * (num_chars_printed - len(transcript))
 
         if not result.is_final:
@@ -238,8 +218,6 @@ def listen_print_loop(responses):
 
 def speechRecognition():
     print("hello")
-    # See http://g.co/cloud/speech/docs/languages
-    # for a list of supported languages.
     language_code = 'ja-JP'  # a BCP-47 language tag
     client = speech.SpeechClient()
     config = types.RecognitionConfig(
@@ -264,31 +242,34 @@ def speechRecognition():
 
 
 def main():
-    global flag
-    global msg
+    global can_speechrec_flag
+    global message_from_processing
     global to_pcg
     global stock
+    global icon_name
 
     while True:
-        if flag is True:
+        if can_speechrec_flag is True:
             speechRecognition()
             recordSound(CHANNEL, RATE, stock)
         else:
-            if msg == "connected":
+            if message_from_processing == "connected":
                 to_pcg = []
                 stock = []
-                flag = True
-            elif msg == "done":
+                can_speechrec_flag = True
+            elif message_from_processing == "done":
                 print("write")
                 writeText()
-                msg = ""
+                message_from_processing = ""
+            elif message_from_processing == "":
+                can_speechrec_flag = False
             else:
-                flag = False
+                icon_name = message_from_processing
 
 
 def on_message(ws, message):
-    global msg
-    msg = message
+    global message_from_processing
+    message_from_processing = message
 
 # websocketの通信がエラー状態の時
 
