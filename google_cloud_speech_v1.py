@@ -260,7 +260,12 @@ def main():
 
 def on_message(ws, message):
     global message_from_processing
-    message_from_processing = message
+    global icon_name
+    if message.isdecimal() is True:
+        icon_name = message
+    else:
+        message_from_processing = message
+
 
 # websocketの通信がエラー状態の時
 
