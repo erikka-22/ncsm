@@ -1,19 +1,15 @@
 # coding: utf-8
 from __future__ import division
 
-import os
 import re
 import sys
 import pyaudio
 import websocket
 import threading
 import time
-import json
-import collections
 
-
+import functions.text_handling as text
 import functions.recordSound as rec_sound
-import functions.send_each_char as send_each_char
 
 from google.cloud import speech
 from google.cloud.speech import enums
@@ -34,38 +30,19 @@ CHANNEL = 1
 
 
 # 認識結果保存ファイルの場所を指定
-rectext = '/Users/erika/aftertaste/data/test.txt'
+rectext = '/Users/erika/aftertaste/data/test.json'
+# アイコン画像保存ディレクトリのパス
+icon_dir = '/Users/erika/aftertaste/data/picture/'
 
 # 認識結果を保存するリスト
 to_pcg = []
-stock = []
+voice_for_recording = []
 
 charBuff = queue.Queue()
 
 can_speechrec_flag = False
 message_from_processing = ""
 icon_name = ""
-
-
-# 認識結果を書き込む指示
-def writeText():
-    global to_pcg
-    global icon_name
-
-    writing = '，'.join(to_pcg)
-
-    if os.path.isfile(rectext):
-        with open(rectext, mode='a') as outfile:
-            outfile.write(writing)
-
-    else:
-        with open(rectext, mode='w') as outfile:
-            outfile.write(writing)
-
-
-def divideText(showChar):
-    for char in showChar:
-        charBuff.put(char)
 
 
 def sendCharacter():
@@ -76,7 +53,7 @@ def sendCharacter():
         time.sleep(8)
 
 
-def schedule(interval, wait=True):
+def schedule(interval: float, wait: bool):
     base_time = time.time()
     next_time = 0
     while True:
@@ -93,11 +70,10 @@ def schedule(interval, wait=True):
 class MicrophoneStream(object):
     """Opens a recording stream as a generator yielding the audio chunks."""
 
-    def __init__(self, rate, chunk):
+    def __init__(self, rate: int, chunk: int):
         self._rate = rate
         self._chunk = chunk
 
-        # Create a thread-safe buffer of audio data
         self._buff = queue.Queue()
         self.closed = True
 
@@ -105,8 +81,6 @@ class MicrophoneStream(object):
         self._audio_interface = pyaudio.PyAudio()
         self._audio_stream = self._audio_interface.open(
             format=pyaudio.paInt16,
-            # The API currently only supports 1-channel (mono) audio
-            # https://goo.gl/z757pE
             channels=1, rate=self._rate,
             input=True, frames_per_buffer=self._chunk,
             stream_callback=self._fill_buffer,
@@ -121,8 +95,6 @@ class MicrophoneStream(object):
         self._audio_stream.stop_stream()
         self._audio_stream.close()
         self.closed = True
-        # Signal the generator to terminate so that the client's
-        # streaming_recognize method will not block the process termination.
         self._buff.put(None)
         self._audio_interface.terminate()
 
@@ -139,18 +111,13 @@ class MicrophoneStream(object):
             if message_from_processing == "end":
                 can_speechrec_flag = False
                 print("end")
-                # self.close = True
                 break
-            # Use a blocking get() to ensure there's at least one chunk of
-            # data, and stop iteration if the chunk is None, indicating the
-            # end of the audio stream.
             chunk = self._buff.get()
             if chunk is None:
                 return
             stock.append(chunk)
             data = [chunk]
 
-            # Now consume whatever other data's still buffered.
             while True:
                 try:
                     chunk = self._buff.get(block=False)
@@ -176,7 +143,6 @@ def listen_print_loop(responses):
         if not result.alternatives:
             continue
 
-        # Display the transcription of the top alternative.
         transcript = result.alternatives[0].transcript
 
         overwrite_chars = ' ' * (num_chars_printed - len(transcript))
@@ -190,8 +156,6 @@ def listen_print_loop(responses):
         else:
             print(transcript + overwrite_chars)
 
-            # Exit recognition if any of the transcribed phrases could be
-            # one of our keywords.
             if re.search(r'\b(exit|quit)\b', transcript, re.I):
                 print('Exiting..')
                 break
@@ -201,15 +165,14 @@ def listen_print_loop(responses):
             # 最終認識結果をリストに追加
             to_pcg.append(recognizedText)
 
-            send_each_char.divideText(recognizedText)
+            text.divideText(recognizedText)
 
-            send_each_char.schedule(0.25, False)
+            schedule(0.25, False)
 
             num_chars_printed = 0
 
 
 def speechRecognition():
-    getWebSocketApp()
     print("Start SpeechRecognition")
     language_code = 'ja-JP'  # a BCP-47 language tag
     client = speech.SpeechClient()
@@ -230,7 +193,6 @@ def speechRecognition():
 
         responses = client.streaming_recognize(streaming_config, requests)
 
-        # Now, put the transcription responses to use.
         listen_print_loop(responses)
 
 
@@ -238,21 +200,21 @@ def main():
     global can_speechrec_flag
     global message_from_processing
     global to_pcg
-    global stock
+    global voice_for_recording
     global icon_name
 
     while True:
         if can_speechrec_flag is True:
             speechRecognition()
-            rec_sound.recordSound(CHANNEL, RATE, stock)
+            rec_sound.recordSound(CHANNEL, RATE, voice_for_recording)
         else:
             if message_from_processing == "connected":
                 to_pcg = []
-                stock = []
+                voice_for_recording = []
                 can_speechrec_flag = True
             elif message_from_processing == "done":
                 print("write")
-                writeText()
+                text.writeText(to_pcg, icon_dir, icon_name, rectext)
                 message_from_processing = ""
             elif message_from_processing == "":
                 can_speechrec_flag = False
@@ -286,11 +248,6 @@ def on_open(ws):
         ws.close()
         print("thread terminating...")
     thread.start_new_thread(run, ())
-
-
-def getWebSocketApp():
-    print(ws)
-    return ws
 
 
 if __name__ == '__main__':
