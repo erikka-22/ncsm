@@ -78,6 +78,7 @@ class MicrophoneStream(object):
         self.closed = True
 
     def __enter__(self):
+        print("test")
         self._audio_interface = pyaudio.PyAudio()
         self._audio_stream = self._audio_interface.open(
             format=pyaudio.paInt16,
@@ -134,8 +135,8 @@ class MicrophoneStream(object):
 
 def listen_print_loop(responses):
     num_chars_printed = 0
-
     for response in responses:
+
         if not response.results:
             continue
 
@@ -192,7 +193,6 @@ def speechRecognition():
                     for content in audio_generator)
 
         responses = client.streaming_recognize(streaming_config, requests)
-
         listen_print_loop(responses)
 
 
