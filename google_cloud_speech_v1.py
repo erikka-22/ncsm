@@ -1,7 +1,6 @@
 # coding: utf-8
 from __future__ import division
 
-import os
 import re
 import sys
 import pyaudio
@@ -9,11 +8,14 @@ import websocket
 import threading
 import time
 
+import functions.text_handling as text
+import functions.recordSound as rec_sound
+
 from google.cloud import speech
 from google.cloud.speech import enums
 from google.cloud.speech import types
 from six.moves import queue
-from datetime import datetime
+
 # websocketのやり取りのために用いられるモジュール
 try:
     import thread
@@ -24,41 +26,23 @@ except ImportError:
 # Audio recording parameters
 RATE = 16000
 CHUNK = int(RATE / 10)  # 100ms
+CHANNEL = 1
 
-# ファイル名に用いる
-nowtime = datetime.now().strftime('%s')
 
 # 認識結果保存ファイルの場所を指定
-rectext = '/Users/erika/aftertaste/data/string.txt'
+rectext = '/Users/erika/aftertaste/data/test.json'
+# アイコン画像保存ディレクトリのパス
+icon_dir = '/Users/erika/aftertaste/data/picture/'
 
 # 認識結果を保存するリスト
 to_pcg = []
+voice_for_recording = []
 
 charBuff = queue.Queue()
 
-flag = False
-msg = ""
-
-# 認識結果を書き込む指示
-
-
-def writeText():
-    global to_pcg
-    writing = '，'.join(to_pcg) + '\n'
-    to_pcg = []
-    # to_pcg = writing
-    if os.path.isfile(rectext):
-        with open(rectext, mode='a') as outfile:
-            outfile.write(writing)
-
-    else:
-        with open(rectext, mode='w') as outfile:
-            outfile.write(writing)
-
-
-def divideText(showChar):
-    for char in showChar:
-        charBuff.put(char)
+can_speechrec_flag = False
+message_from_processing = ""
+icon_name = ""
 
 
 def sendCharacter():
@@ -69,7 +53,7 @@ def sendCharacter():
         time.sleep(8)
 
 
-def schedule(interval, wait=True):
+def schedule(interval: float, wait: bool):
     base_time = time.time()
     next_time = 0
     while True:
@@ -127,11 +111,11 @@ class MicrophoneStream(object):
         return None, pyaudio.paContinue
 
     def generator(self):
-        global msg
-        global flag
+        global message_from_processing
+        global can_speechrec_flag
         while not self.closed:
-            if msg == "end":
-                flag = False
+            if message_from_processing == "end":
+                can_speechrec_flag = False
                 print("end")
                 break
             # Use a blocking get() to ensure there's at least one chunk of
@@ -156,7 +140,7 @@ class MicrophoneStream(object):
             yield b''.join(data)
 
 
-def listen_print_loop(responses):
+def listen_print_loop(responses, buffer):
     """Iterates through server responses and prints them.
     The responses passed is a generator that will block until a response
     is provided by the server.
@@ -168,7 +152,6 @@ def listen_print_loop(responses):
     the next result to overwrite it, until the response is a final one. For the
     final one, print a newline to preserve the finalized transcription.
     """
-    global msg
     num_chars_printed = 0
     for response in responses:
         if not response.results:
@@ -211,7 +194,7 @@ def listen_print_loop(responses):
             # 最終認識結果をリストに追加
             to_pcg.append(recognizedText)
 
-            divideText(recognizedText)
+            text.divideText(recognizedText, buffer)
 
             schedule(0.25, False)
 
@@ -219,6 +202,8 @@ def listen_print_loop(responses):
 
 
 def speechRecognition():
+    global charBuff
+
     print("hello")
     # See http://g.co/cloud/speech/docs/languages
     # for a list of supported languages.
@@ -241,30 +226,44 @@ def speechRecognition():
                     for content in audio_generator)
 
         responses = client.streaming_recognize(streaming_config, requests)
+        print(responses)
 
         # Now, put the transcription responses to use.
-        listen_print_loop(responses)
+        listen_print_loop(responses, charBuff)
 
 
 def main():
-    global flag
-    global msg
+    global can_speechrec_flag
+    global message_from_processing
+    global to_pcg
+    global voice_for_recording
+    global icon_name
+
     while True:
-        if flag is True:
+        if can_speechrec_flag is True:
             speechRecognition()
+            rec_sound.recordSound(CHANNEL, RATE, voice_for_recording)
         else:
-            print("")
-            if msg == "connected":
-                flag = True
-                msg = ""
-            elif msg == "done":
-                writeText()
-                msg = ""
+            if message_from_processing == "connected":
+                to_pcg = []
+                voice_for_recording = []
+                can_speechrec_flag = True
+            elif message_from_processing == "done":
+                print("write")
+                text.writeText(to_pcg, icon_dir, icon_name, rectext)
+                message_from_processing = ""
+            else:
+                can_speechrec_flag = False
 
 
 def on_message(ws, message):
-    global msg
-    msg = message
+    global message_from_processing
+    global icon_name
+    if message.isdecimal() is True:
+        icon_name = message
+    else:
+        message_from_processing = message
+
 
 # websocketの通信がエラー状態の時
 
@@ -282,8 +281,6 @@ def on_close(ws):
 
 
 def on_open(ws):
-    global flag
-    flag = True
 
     def run(*args):
         main()
@@ -304,4 +301,4 @@ if __name__ == '__main__':
     ws.on_open = on_open
 
     ws.run_forever()
-    # # execution()
+    # execution()
