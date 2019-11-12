@@ -252,10 +252,8 @@ def main():
                 print("write")
                 text.writeText(to_pcg, icon_dir, icon_name, rectext)
                 message_from_processing = ""
-            elif message_from_processing == "":
-                can_speechrec_flag = False
             else:
-                icon_name = message_from_processing
+                can_speechrec_flag = False
 
 
 def on_message(ws, message):
