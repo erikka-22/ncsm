@@ -43,6 +43,7 @@ charBuff = queue.Queue()
 can_speechrec_flag = False
 message_from_processing = ""
 icon_name = ""
+exhi_id = ""
 
 
 def sendCharacter():
@@ -226,7 +227,6 @@ def speechRecognition():
                     for content in audio_generator)
 
         responses = client.streaming_recognize(streaming_config, requests)
-        print(responses)
 
         # Now, put the transcription responses to use.
         listen_print_loop(responses, charBuff)
@@ -250,7 +250,7 @@ def main():
                 can_speechrec_flag = True
             elif message_from_processing == "done":
                 print("write")
-                text.writeText(to_pcg, icon_dir, icon_name, rectext)
+                text.writeText(to_pcg, icon_dir, icon_name, exhi_id, rectext)
                 message_from_processing = ""
             else:
                 can_speechrec_flag = False
@@ -259,7 +259,11 @@ def main():
 def on_message(ws, message):
     global message_from_processing
     global icon_name
-    if message.isdecimal() is True:
+    global exhi_id
+    if message.find('z') == 0:
+        exhi_id = message
+        print(exhi_id)
+    elif message.isdecimal() is True:
         icon_name = message
     else:
         message_from_processing = message

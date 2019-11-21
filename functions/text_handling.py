@@ -24,11 +24,13 @@ def append_json_to_file(data: dict, path_file: str) -> bool:
 # 認識結果を書き込む指示
 
 
-def writeText(text: list, icon_dir: str, icon_name: str, json_file_path: str):
+def writeText(text: list, icon_dir: str, icon_name: str, exhi_id: str, json_file_path: str):
     comment_text = '，'.join(text)
     print(comment_text)
-    icon_path = icon_dir + icon_name + ".jpg"
-    card = {'pic_name': icon_path, 'comment': comment_text}
+    # icon_path = icon_dir + icon_name + ".jpg"
+    icon_path = icon_dir + icon_name + ".png"
+    card = {'pic_name': icon_path,
+            'comment': comment_text, 'exhi_id': exhi_id[1:]}
 
     append_json_to_file(card, json_file_path)
 
