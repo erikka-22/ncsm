@@ -308,4 +308,3 @@ if __name__ == '__main__':
     ws.on_open = on_open
 
     ws.run_forever()
-    # execution()
