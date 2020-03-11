@@ -126,6 +126,7 @@ class MicrophoneStream(object):
             if chunk is None:
                 return
             data = [chunk]
+            voice_for_recording = [chunk]
 
             # Now consume whatever other data's still buffered.
             while True:
@@ -135,6 +136,7 @@ class MicrophoneStream(object):
                     if chunk is None:
                         return
                     data.append(chunk)
+                    voice_for_recording.append(chunk)
                 except queue.Empty:
                     break
 
@@ -242,6 +244,7 @@ def main():
     while True:
         if can_speechrec_flag is True:
             speechRecognition()
+            print(voice_for_recording)
             rec_sound.recordSound(CHANNEL, RATE, voice_for_recording)
         else:
             if message_from_processing == "connected":
