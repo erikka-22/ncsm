@@ -1,5 +1,6 @@
 import json
 import codecs
+import datetime
 
 
 def divideText(showChar: str, buffer):
@@ -24,11 +25,19 @@ def append_json_to_file(data: dict, path_file: str) -> bool:
 # 認識結果を書き込む指示
 
 
-def writeText(text: list, icon_dir: str, icon_name: str, json_file_path: str):
+def writeText(text: list, icon_dir: str, icon_name: str, exhi_id: str, json_file_path: str):
     comment_text = '，'.join(text)
-    print(comment_text)
-    icon_path = icon_dir + icon_name + ".jpg"
-    card = {'pic_name': icon_path, 'comment': comment_text}
+    # print(comment_text)
+    todays_date = datetime.date.today()
+    # icon_path = icon_dir + icon_name + ".jpg"
+
+    if not icon_name:
+        icon_path = icon_dir + "anonymous.png"
+    else:
+        icon_path = icon_dir + icon_name + ".png"
+
+    card = {'pic_name': icon_path,
+            'comment': comment_text, 'exhi_id': exhi_id[1:], 'date': todays_date.strftime("%Y/%m/%d")}
 
     append_json_to_file(card, json_file_path)
 
