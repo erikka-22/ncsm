@@ -21,7 +21,7 @@ This software is released under the MIT License, see LICENSE.txt.
 下記のコマンドで仮想環境をアクティベートできます.
 (筆者はfishを利用していたので，bashの場合のやつは確認できてないです．zsh等その他のシェルを利用している場合は各自調べてください．)  
 `
-$ cd /path/to/thisdirectory  
+$ cd /path/to/thisdirectory /n    
 (bashの場合) $ source venv/bin/activate      
 (fishの場合) $ source venv/bin/activate.fish  
 `
