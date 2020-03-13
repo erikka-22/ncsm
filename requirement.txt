@@ -1,0 +1,6 @@
+###### Requirements without Version Specifiers ######`
+gcloud
+google-cloud-speech
+pyaudio
+pylint
+websocket-client
