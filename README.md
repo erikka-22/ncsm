@@ -19,11 +19,11 @@ This software is released under the MIT License, see LICENSE.txt.
 
 一応，必要なモジュールをインストールした環境を用意したので，それを利用して実行してみてください．
 下記のコマンドで仮想環境をアクティベートできます.
-(筆者はfishを利用していたので，bashの場合のやつは確認できてないです．zsh等その他のシェルを利用している場合は各自調べてください．)
+(筆者はfishを利用していたので，bashの場合のやつは確認できてないです．zsh等その他のシェルを利用している場合は各自調べてください．)  
 `
-$ cd /path/to/thisdirectory
-(bashの場合) $ source venv/bin/activate 
-(fishの場合) $ source venv/bin/activate.fish
+$ cd /path/to/thisdirectory  
+(bashの場合) $ source venv/bin/activate      
+(fishの場合) $ source venv/bin/activate.fish  
 `
 
 requirement.txtも用意しました．自身で作成した環境に必要なモジュールをインストールして実行していただいても大丈夫です．
