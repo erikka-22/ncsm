@@ -45,7 +45,7 @@ message_from_processing = ""
 icon_name = ""
 exhi_id = ""
 
-
+# websocketで文字を送る関数．ws.send()の中身が送られる．
 def sendCharacter():
     while not charBuff.empty():
         c = charBuff.get()
@@ -53,7 +53,7 @@ def sendCharacter():
         ws.send(c)
         time.sleep(8)
 
-
+# sendCharacterを実行するのにちょっと間隔を開けるための関数．文字をカタカタって出すために使っている．引数intervalの大きさを調整することで間隔が調整される．
 def schedule(interval: float, wait: bool):
     base_time = time.time()
     next_time = 0
@@ -71,6 +71,7 @@ def schedule(interval: float, wait: bool):
 class MicrophoneStream(object):
     """Opens a recording stream as a generator yielding the audio chunks."""
 
+# 113行目まではほぼサンプルコードそのままです．わからないことがあれば公式ドキュメントを見てください．https://cloud.google.com/speech-to-text/docs/reference/rpc/google.cloud.speech.v1?hl=ja#google.cloud.speech.v1.Speech
     def __init__(self, rate, chunk):
         self._rate = rate
         self._chunk = chunk
@@ -115,10 +116,12 @@ class MicrophoneStream(object):
         global message_from_processing
         global can_speechrec_flag
         while not self.closed:
+            # Processing側にて音声受付の画面から内容確認の画面に遷移するタイミングで"end"というメッセージが送られてくる．それをトリガーに音声ストリーミングのループから一旦離脱する．
             if message_from_processing == "end":
                 can_speechrec_flag = False
                 print("end")
                 break
+
             # Use a blocking get() to ensure there's at least one chunk of
             # data, and stop iteration if the chunk is None, indicating the
             # end of the audio stream.
@@ -197,6 +200,7 @@ def listen_print_loop(responses, buffer):
             # 最終認識結果をリストに追加
             to_pcg.append(recognizedText)
 
+            # テキストを1文字ずつに分割
             text.divideText(recognizedText, buffer)
 
             schedule(0.25, False)
@@ -241,16 +245,20 @@ def main():
     global voice_for_recording
     global icon_name
 
+# APIを叩き続ける時間とそうで無い時間とを切り分けている．
     while True:
         if can_speechrec_flag is True:
             speechRecognition()
             print(voice_for_recording)
+            # 音声をWAVE形式で記録
             rec_sound.recordSound(CHANNEL, RATE, voice_for_recording)
         else:
             if message_from_processing == "connected":
                 to_pcg = []
                 voice_for_recording = []
                 can_speechrec_flag = True
+
+            # 文字起こし結果をpythonプログラムでJSONファイルに記録して，JSONファイルをProcessingで読んで表示する方法を取っている．暫定結果→確認→記録という段取りにしていて，確認が完了したタイミングで"done"というメッセージが送られてくるので"done"を受け取ったら文字起こし結果をJSONファイルに追記する．
             elif message_from_processing == "done":
                 print("write")
                 text.writeText(to_pcg, icon_dir, icon_name, exhi_id, rectext)
